@@ -396,16 +396,24 @@ export async function backfillProductPhotos(limit = 300): Promise<{ checked: num
 
 const PHOTO_CODES_TTL_MS = 15 * 60 * 1000;
 
+// Полный скан коллекции product_photos (тысячи документов) — дорого по квоте Firestore,
+// поэтому результат складываем в list_cache (1-2 чтения) и обновляем фоном по TTL,
+// а не сканируем коллекцию на каждый промах in-memory кэша инстанса.
+async function fetchPhotoCodesArray(): Promise<string[]> {
+  const db = getDb();
+  const snap = await db.collection(PHOTOS_COLLECTION).get();
+  const codes: string[] = [];
+  for (const doc of snap.docs) {
+    if (doc.data()?.sha) codes.push(doc.id);
+  }
+  return codes;
+}
+
 // Множество кодов товаров, для которых уже найдено фото (для сортировки списков).
 export async function getPhotoCodeSet(): Promise<Set<string>> {
   return cached('photo_codes', PHOTO_CODES_TTL_MS, async () => {
-    const db = getDb();
-    const snap = await db.collection(PHOTOS_COLLECTION).get();
-    const set = new Set<string>();
-    for (const doc of snap.docs) {
-      if (doc.data()?.sha) set.add(doc.id);
-    }
-    return set;
+    const codes = await getCachedList('photo_codes_list', fetchPhotoCodesArray, PHOTO_CODES_TTL_MS);
+    return new Set(codes);
   });
 }
 
