@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getProductStock, getCachedCatalog } from '@/lib/products';
+import { getProductStock, getCachedCatalog, getStockMap } from '@/lib/products';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,10 +11,17 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const [stock, catalog] = await Promise.all([getProductStock(code), getCachedCatalog()]);
+    const [stock, catalog, stockMap] = await Promise.all([
+      getProductStock(code),
+      getCachedCatalog(),
+      getStockMap(),
+    ]);
     const item = catalog.find((c) => c.code === code);
     const similar = item
-      ? catalog.filter((c) => c.group === item.group && c.code !== item.code).slice(0, 12)
+      ? catalog
+          .filter((c) => c.group === item.group && c.code !== item.code)
+          .slice(0, 12)
+          .map((c) => ({ ...c, stock: stockMap.get(c.code) || 0 }))
       : [];
 
     return Response.json({

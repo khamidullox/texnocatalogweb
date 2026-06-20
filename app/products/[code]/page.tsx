@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ProductCard from '@/app/components/ProductCard';
+import RequestStockButton from '@/app/components/RequestStockButton';
 
 interface SimilarItem {
   code: string;
@@ -10,6 +11,7 @@ interface SimilarItem {
   producer: string;
   group: string;
   price: number;
+  stock: number;
 }
 
 interface ProductStock {
@@ -104,9 +106,10 @@ export default function ProductDetailPage() {
                     ✅ В наличии: {stock.total} шт.
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg">
-                    Нет в наличии
-                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-sm font-medium text-gray-400">Нет в наличии</span>
+                    <RequestStockButton code={code} />
+                  </div>
                 )}
               </div>
             </>

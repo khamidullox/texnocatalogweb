@@ -1,4 +1,4 @@
-import { getCachedCatalog, getPhotoCodeSet } from '@/lib/products';
+import { getCachedCatalog, getPhotoCodeSet, getStockMap } from '@/lib/products';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -7,8 +7,13 @@ export const dynamic = 'force-dynamic';
 // Товары с уже найденным фото идут первыми — карточки в начале списка не пустые.
 export async function GET() {
   try {
-    const [catalog, photoCodes] = await Promise.all([getCachedCatalog(), getPhotoCodeSet()]);
-    const data = [...catalog].sort((a, b) => {
+    const [catalog, photoCodes, stockMap] = await Promise.all([
+      getCachedCatalog(),
+      getPhotoCodeSet(),
+      getStockMap(),
+    ]);
+    const withStock = catalog.map((c) => ({ ...c, stock: stockMap.get(c.code) || 0 }));
+    const data = withStock.sort((a, b) => {
       const aHas = photoCodes.has(a.code) ? 1 : 0;
       const bHas = photoCodes.has(b.code) ? 1 : 0;
       return bHas - aHas;

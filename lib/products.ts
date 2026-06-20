@@ -206,6 +206,20 @@ function getCachedBalance(): Promise<SlimBalance[]> {
   return getCachedSnapshot('balance_free', fetchSlimBalance, STOCK_FRESH_MS, BALANCE_CHUNK);
 }
 
+const STOCK_MAP_TTL_MS = 5 * 60 * 1000;
+
+// Суммарный остаток по коду товара (для списков — без разбивки по складам).
+export async function getStockMap(): Promise<Map<string, number>> {
+  return cached('stock_map', STOCK_MAP_TTL_MS, async () => {
+    const balance = await getCachedBalance();
+    const map = new Map<string, number>();
+    for (const b of balance) {
+      map.set(b.p, (map.get(b.p) || 0) + b.q);
+    }
+    return map;
+  });
+}
+
 interface WhRef {
   id: string;
   name: string;
