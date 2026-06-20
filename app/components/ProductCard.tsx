@@ -19,14 +19,14 @@ export default function ProductCard({ p }: { p: CardProduct }) {
       href={`/products/${encodeURIComponent(p.code)}`}
       className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col overflow-hidden h-full"
     >
-      <div className="aspect-square bg-gray-50 flex items-center justify-center">
+      <div className="h-36 sm:h-40 w-full bg-gray-50 flex items-center justify-center shrink-0">
         {photoOk ? (
           <img
             src={`/api/products/${encodeURIComponent(p.code)}/photo`}
             alt={p.name}
             loading="lazy"
             onError={() => setPhotoOk(false)}
-            className="w-full h-full object-contain"
+            className="max-h-full max-w-full object-contain"
           />
         ) : (
           <span className="text-3xl text-gray-300">📦</span>

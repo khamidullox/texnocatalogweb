@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { getProductPhotoSha, fetchProductPhotoBytes } from '@/lib/products';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// Без force-dynamic: Vercel Edge кеширует ответ по Cache-Control (картинка
+// не меняется), повторные просмотры не бьют по Smartup/Firestore вообще.
 export const maxDuration = 30;
 
 export async function GET(

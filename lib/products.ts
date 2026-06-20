@@ -342,10 +342,18 @@ export async function getProductPhotoSha(code: string): Promise<string | null> {
 // maxDuration серверлесс-функции и не упираться в лимиты Smartup API).
 // Курсор хранится в Firestore — следующий запуск продолжает с того же места,
 // по кругу.
-export async function backfillProductPhotos(limit = 300): Promise<{ checked: number; found: number; cursor: number }> {
+export async function backfillProductPhotos(limit = 300): Promise<{ checked: number; found: number; cursor: number; pool: number }> {
   const db = getDb();
-  const catalog = await getCachedCatalog();
-  if (catalog.length === 0) return { checked: 0, found: 0, cursor: 0 };
+  const [catalog, balance] = await Promise.all([getCachedCatalog(), getCachedBalance()]);
+
+  // Фото нужны только тем товарам, у которых сейчас есть остаток —
+  // не тратим лимиты Smartup/Firestore на то, чего нет на складе.
+  const inStock = new Set<string>();
+  for (const b of balance) {
+    if (b.q > 0) inStock.add(b.p);
+  }
+  const pool = catalog.filter((c) => inStock.has(c.code));
+  if (pool.length === 0) return { checked: 0, found: 0, cursor: 0, pool: 0 };
 
   const metaRef = db.doc(PHOTOS_SYNC_META_DOC);
   const meta = await metaRef.get();
@@ -354,8 +362,8 @@ export async function backfillProductPhotos(limit = 300): Promise<{ checked: num
   let found = 0;
   let i = startIdx;
   let checked = 0;
-  while (checked < limit && checked < catalog.length) {
-    const item = catalog[i % catalog.length];
+  while (checked < limit && checked < pool.length) {
+    const item = pool[i % pool.length];
     try {
       const sha = await fetchProductPhotoSha(item.product_id);
       if (sha) found++;
@@ -367,9 +375,24 @@ export async function backfillProductPhotos(limit = 300): Promise<{ checked: num
     i++;
   }
 
-  const cursor = i % catalog.length;
+  const cursor = i % pool.length;
   await metaRef.set({ next_index: cursor, updated_at: Date.now() });
-  return { checked, found, cursor };
+  return { checked, found, cursor, pool: pool.length };
+}
+
+const PHOTO_CODES_TTL_MS = 15 * 60 * 1000;
+
+// Множество кодов товаров, для которых уже найдено фото (для сортировки списков).
+export async function getPhotoCodeSet(): Promise<Set<string>> {
+  return cached('photo_codes', PHOTO_CODES_TTL_MS, async () => {
+    const db = getDb();
+    const snap = await db.collection(PHOTOS_COLLECTION).get();
+    const set = new Set<string>();
+    for (const doc of snap.docs) {
+      if (doc.data()?.sha) set.add(doc.id);
+    }
+    return set;
+  });
 }
 
 // Скачивает байты фото у Smartup (тот же логин/пароль, что и для API).
@@ -381,6 +404,7 @@ export async function fetchProductPhotoBytes(
   const base = process.env.SMARTUP_URL || 'https://smartup.online';
   const res = await fetch(`${base}/b/biruni/m:load_file_v2?sha=${encodeURIComponent(sha)}`, {
     headers: { Authorization: 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64') },
+    next: { revalidate: 86400 },
   });
   if (!res.ok) return null;
   const bytes = Buffer.from(await res.arrayBuffer());
