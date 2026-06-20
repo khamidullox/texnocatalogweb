@@ -52,6 +52,20 @@ export default function HomePage() {
         <PromoBanner />
       </div>
 
+      {!loading && sections.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-6">
+          {sections.map(({ group }) => (
+            <Link
+              key={group}
+              href={`/catalog?group=${encodeURIComponent(group)}`}
+              className="shrink-0 bg-white hover:bg-violet-50 hover:text-violet-700 text-gray-600 text-xs font-medium px-3.5 py-2 rounded-full shadow-sm whitespace-nowrap"
+            >
+              {group}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
 
       {loading ? (
@@ -63,15 +77,13 @@ export default function HomePage() {
         <div className="flex flex-col gap-6">
           {sections.map(({ group, items }) => (
             <div key={group}>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-base">{group}</h3>
-                <Link
-                  href={`/catalog?group=${encodeURIComponent(group)}`}
-                  className="text-sm text-blue-600 hover:underline whitespace-nowrap"
-                >
-                  Смотреть все →
-                </Link>
-              </div>
+              <Link
+                href={`/catalog?group=${encodeURIComponent(group)}`}
+                className="flex items-center justify-between mb-2 group/h"
+              >
+                <h3 className="font-bold text-base group-hover/h:text-violet-700">{group}</h3>
+                <span className="text-gray-400 group-hover/h:text-violet-600 text-lg">›</span>
+              </Link>
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
                 {items.map((p) => (
                   <div key={p.code} className="w-40 sm:w-44 shrink-0">
