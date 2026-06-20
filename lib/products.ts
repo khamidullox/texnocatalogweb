@@ -307,6 +307,8 @@ export async function getProductStock(code: string): Promise<ProductStock> {
 // Smartup). Дальше картинка скачивается тем же Basic Auth с m:load_file_v2.
 const PRODUCT_VIEW_MODEL_ENDPOINT = '/b/anor/mr/product/inventory_view:model';
 const PHOTO_SHA_TTL_MS = 6 * 60 * 60 * 1000;
+const PHOTOS_COLLECTION = 'product_photos';
+const PHOTOS_SYNC_META_DOC = 'meta/photos_sync';
 
 async function fetchProductPhotoSha(productId: string): Promise<string | null> {
   const data = await smartupRequest<unknown[]>(PRODUCT_VIEW_MODEL_ENDPOINT, {
@@ -317,15 +319,57 @@ async function fetchProductPhotoSha(productId: string): Promise<string | null> {
   return sha || null;
 }
 
-// sha фото товара по коду (резолвит code → product_id через каталог), кэш в памяти.
+// sha фото товара по коду: сперва смотрим в Firestore (наполняется фоновым
+// бэкфиллом, см. backfillProductPhotos), а если ещё не дошли руки — берём
+// вживую у Smartup и сразу сохраняем, чтобы второй раз не дёргать API.
 export async function getProductPhotoSha(code: string): Promise<string | null> {
   const needle = normalizeCode(code);
   return cached(`photo_sha:${needle}`, PHOTO_SHA_TTL_MS, async () => {
+    const db = getDb();
+    const doc = await db.collection(PHOTOS_COLLECTION).doc(needle).get();
+    if (doc.exists) return (doc.data()?.sha as string | null) ?? null;
+
     const catalog = await getCachedCatalog();
     const item = catalog.find((c) => c.code === needle);
     if (!item) return null;
-    return fetchProductPhotoSha(item.product_id);
+    const sha = await fetchProductPhotoSha(item.product_id);
+    await db.collection(PHOTOS_COLLECTION).doc(needle).set({ sha, checked_at: Date.now() });
+    return sha;
   });
+}
+
+// Фоновый бэкфилл sha по всему каталогу (порциями, чтобы укладываться в
+// maxDuration серверлесс-функции и не упираться в лимиты Smartup API).
+// Курсор хранится в Firestore — следующий запуск продолжает с того же места,
+// по кругу.
+export async function backfillProductPhotos(limit = 300): Promise<{ checked: number; found: number; cursor: number }> {
+  const db = getDb();
+  const catalog = await getCachedCatalog();
+  if (catalog.length === 0) return { checked: 0, found: 0, cursor: 0 };
+
+  const metaRef = db.doc(PHOTOS_SYNC_META_DOC);
+  const meta = await metaRef.get();
+  const startIdx = (meta.data()?.next_index as number) || 0;
+
+  let found = 0;
+  let i = startIdx;
+  let checked = 0;
+  while (checked < limit && checked < catalog.length) {
+    const item = catalog[i % catalog.length];
+    try {
+      const sha = await fetchProductPhotoSha(item.product_id);
+      if (sha) found++;
+      await db.collection(PHOTOS_COLLECTION).doc(item.code).set({ sha, checked_at: Date.now() });
+    } catch {
+      // не получилось — попробуем этот товар в следующем заходе цикла
+    }
+    checked++;
+    i++;
+  }
+
+  const cursor = i % catalog.length;
+  await metaRef.set({ next_index: cursor, updated_at: Date.now() });
+  return { checked, found, cursor };
 }
 
 // Скачивает байты фото у Smartup (тот же логин/пароль, что и для API).

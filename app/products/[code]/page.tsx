@@ -2,16 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import ProductCard from '@/app/components/ProductCard';
 
-interface StockRow {
-  warehouse_name: string;
-  quantity: number;
+interface SimilarItem {
+  code: string;
+  name: string;
+  producer: string;
+  group: string;
+  price: number;
 }
 
 interface ProductStock {
-  rows: StockRow[];
   total: number;
   wholesale_price: number;
+  name: string;
+  producer: string;
+  group: string;
+  price: number;
+  similar: SimilarItem[];
 }
 
 export default function ProductDetailPage() {
@@ -48,54 +56,76 @@ export default function ProductDetailPage() {
         ← Назад
       </button>
 
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-        {photoOk && (
-          <img
-            src={`/api/products/${encodeURIComponent(code)}/photo`}
-            alt={code}
-            onError={() => setPhotoOk(false)}
-            className="w-full max-h-64 object-contain mb-3 rounded-lg bg-gray-50"
-          />
-        )}
-        <h2 className="font-bold text-base leading-snug">Товар {code}</h2>
-        {stock && stock.wholesale_price > 0 && (
-          <p className="mt-2 text-sm">
-            💵 Оптовая цена:{' '}
-            <strong className="text-emerald-600">{stock.wholesale_price.toLocaleString('ru-RU')} сум</strong>
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-semibold">📦 Остатки по складам</span>
-          {stock && (
-            <span className="text-sm">
-              доступно: <strong className="text-green-600">{stock.total}</strong> шт.
-            </span>
+      <div className="bg-white rounded-xl shadow-sm p-4 mb-4 grid sm:grid-cols-[220px_1fr] gap-4">
+        <div className="aspect-square bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+          {photoOk ? (
+            <img
+              src={`/api/products/${encodeURIComponent(code)}/photo`}
+              alt={code}
+              onError={() => setPhotoOk(false)}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <span className="text-5xl text-gray-300">📦</span>
           )}
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8 gap-2 text-gray-500 text-sm">
-            <span className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-            Загрузка остатков...
-          </div>
-        ) : error ? (
-          <p className="text-red-500 text-sm">{error}</p>
-        ) : stock && stock.rows.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {stock.rows.map((r, i) => (
-              <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
-                <span className="truncate">{r.warehouse_name}</span>
-                <span className="font-bold whitespace-nowrap ml-2">{r.quantity} шт.</span>
+        <div className="flex flex-col">
+          {loading ? (
+            <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
+              <span className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              Загрузка...
+            </div>
+          ) : error ? (
+            <p className="text-red-500 text-sm">{error}</p>
+          ) : (
+            <>
+              <h2 className="font-bold text-lg leading-snug">{stock?.name || `Товар ${code}`}</h2>
+              <div className="text-sm text-gray-400 mt-1">
+                Код {code}
+                {stock?.producer && ` · ${stock.producer}`}
+                {stock?.group && ` · ${stock.group}`}
+              </div>
+
+              {stock && stock.price > 0 && (
+                <p className="mt-3 text-2xl font-bold text-emerald-700">
+                  {stock.price.toLocaleString('ru-RU')} сум
+                </p>
+              )}
+              {stock && stock.wholesale_price > 0 && (
+                <p className="mt-1 text-sm text-gray-500">
+                  Оптовая цена: {stock.wholesale_price.toLocaleString('ru-RU')} сум
+                </p>
+              )}
+
+              <div className="mt-3">
+                {stock && stock.total > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
+                    ✅ В наличии: {stock.total} шт.
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg">
+                    Нет в наличии
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {stock && stock.similar.length > 0 && (
+        <div>
+          <h3 className="font-semibold mb-2">Похожие товары</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {stock.similar.map((s) => (
+              <div key={s.code} className="w-40 sm:w-44 shrink-0">
+                <ProductCard p={s} />
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center text-gray-400 py-8 text-sm">Нет остатков на складах</div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
