@@ -21,6 +21,7 @@ export default function ProductDetailPage() {
   const [stock, setStock] = useState<ProductStock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [photoOk, setPhotoOk] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +49,14 @@ export default function ProductDetailPage() {
       </button>
 
       <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+        {photoOk && (
+          <img
+            src={`/api/products/${encodeURIComponent(code)}/photo`}
+            alt={code}
+            onError={() => setPhotoOk(false)}
+            className="w-full max-h-64 object-contain mb-3 rounded-lg bg-gray-50"
+          />
+        )}
         <h2 className="font-bold text-base leading-snug">Товар {code}</h2>
         {stock && stock.wholesale_price > 0 && (
           <p className="mt-2 text-sm">

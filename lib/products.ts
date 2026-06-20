@@ -61,6 +61,7 @@ function buildBarcodes(item: Record<string, unknown>): string[] {
 
 export interface CatalogItem {
   code: string;
+  product_id: string; // внутренний ID Smartup (нужен для запроса фото)
   name: string;
   producer: string;   // бренд (producer_code; названия за стеной прав Smartup)
   group: string;      // продуктовая группа (первый group_code, без префикса PRDGR:)
@@ -117,6 +118,7 @@ export async function getProductCatalog(): Promise<CatalogItem[]> {
         const code = normalizeCode(i.code);
         return {
           code,
+          product_id: normalizeCode(i.product_id) || code,
           name: String(i.name ?? ''),
           producer: groupTypeName(i, 'PRDGR:5', typeName), // бренд / торговая марка
           group: groupTypeName(i, 'PRDGR:3', typeName),    // вид
@@ -238,7 +240,7 @@ async function getWarehouseIdCodeMap(): Promise<Map<string, string>> {
 
 // Каталог из Firestore-кэша (тот же, что у /api/products), без живого Smartup.
 export function getCachedCatalog(): Promise<CatalogItem[]> {
-  return getCachedList('catalog_v4', getProductCatalog, REF_TTL_MS);
+  return getCachedList('catalog_v5', getProductCatalog, REF_TTL_MS);
 }
 
 // Когда снимок остатков последний раз обновлялся (для подписи «обновлено …»).
@@ -252,7 +254,7 @@ export async function refreshStockCache(): Promise<{ balance: number; warehouses
   const [balance, warehouses] = await Promise.all([
     refreshCachedList('balance_free', fetchSlimBalance, BALANCE_CHUNK),
     refreshCachedList('warehouse_ref_v2', fetchWarehouseRef),
-    refreshCachedList('catalog_v4', getProductCatalog),
+    refreshCachedList('catalog_v5', getProductCatalog),
   ]);
   return { balance, warehouses };
 }
@@ -297,6 +299,48 @@ export async function getProductStock(code: string): Promise<ProductStock> {
     total: rows.reduce((s, r) => s + r.quantity, 0),
     wholesale_price: priceMap.get(needle) ?? 0,
   };
+}
+
+// ─── Фото товара ──────────────────────────────────────────────────────────────
+// Фото нет в inventory$export — нужен отдельный вызов карточки товара
+// (inventory_view:model), который отдаёт sha файла в Biruni (файловое хранилище
+// Smartup). Дальше картинка скачивается тем же Basic Auth с m:load_file_v2.
+const PRODUCT_VIEW_MODEL_ENDPOINT = '/b/anor/mr/product/inventory_view:model';
+const PHOTO_SHA_TTL_MS = 6 * 60 * 60 * 1000;
+
+async function fetchProductPhotoSha(productId: string): Promise<string | null> {
+  const data = await smartupRequest<unknown[]>(PRODUCT_VIEW_MODEL_ENDPOINT, {
+    product_id: productId,
+  });
+  const model = data?.[2] as { photos?: [string, string][] } | undefined;
+  const sha = model?.photos?.[0]?.[0];
+  return sha || null;
+}
+
+// sha фото товара по коду (резолвит code → product_id через каталог), кэш в памяти.
+export async function getProductPhotoSha(code: string): Promise<string | null> {
+  const needle = normalizeCode(code);
+  return cached(`photo_sha:${needle}`, PHOTO_SHA_TTL_MS, async () => {
+    const catalog = await getCachedCatalog();
+    const item = catalog.find((c) => c.code === needle);
+    if (!item) return null;
+    return fetchProductPhotoSha(item.product_id);
+  });
+}
+
+// Скачивает байты фото у Smartup (тот же логин/пароль, что и для API).
+export async function fetchProductPhotoBytes(
+  sha: string
+): Promise<{ bytes: Buffer; contentType: string } | null> {
+  const user = process.env.SMARTUP_USERNAME || '';
+  const pass = process.env.SMARTUP_PASSWORD || '';
+  const base = process.env.SMARTUP_URL || 'https://smartup.online';
+  const res = await fetch(`${base}/b/biruni/m:load_file_v2?sha=${encodeURIComponent(sha)}`, {
+    headers: { Authorization: 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64') },
+  });
+  if (!res.ok) return null;
+  const bytes = Buffer.from(await res.arrayBuffer());
+  return { bytes, contentType: res.headers.get('content-type') || 'image/jpeg' };
 }
 
 // ─── Остатки в разрезе складов (склад → товары) ──────────────────────────────
