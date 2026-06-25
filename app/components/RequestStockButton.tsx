@@ -54,8 +54,8 @@ export default function RequestStockButton({
         }}
         className={
           compact
-            ? 'text-[11px] font-semibold text-violet-600 hover:text-violet-800'
-            : 'text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg transition-colors'
+            ? 'text-[11px] font-semibold text-red-600 hover:text-red-800'
+            : 'text-sm font-semibold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors'
         }
       >
         Запросить
@@ -72,8 +72,8 @@ export default function RequestStockButton({
         placeholder="+998 90 123 45 67"
         className={
           compact
-            ? 'w-[110px] text-[11px] border border-gray-200 rounded-md px-1.5 py-1 outline-none focus:border-violet-400'
-            : 'flex-1 text-sm border-2 border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-violet-400'
+            ? 'w-[110px] text-[11px] border border-gray-200 rounded-md px-1.5 py-1 outline-none focus:border-red-400'
+            : 'flex-1 text-sm border-2 border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-red-400'
         }
         autoFocus
       />
@@ -83,8 +83,8 @@ export default function RequestStockButton({
         disabled={status === 'sending'}
         className={
           compact
-            ? 'text-[11px] font-semibold text-violet-600 disabled:opacity-50 whitespace-nowrap'
-            : 'text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 px-3 py-1.5 rounded-lg whitespace-nowrap'
+            ? 'text-[11px] font-semibold text-red-600 disabled:opacity-50 whitespace-nowrap'
+            : 'text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 px-3 py-1.5 rounded-lg whitespace-nowrap'
         }
       >
         {status === 'sending' ? '...' : 'OK'}

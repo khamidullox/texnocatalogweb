@@ -17,8 +17,8 @@ const BANNERS = [
     title: 'Крупная бытовая техника',
     subtitle: 'Холодильники, морозильники, стиральные машины',
     href: '/catalog?q=morozilnik',
-    from: 'from-violet-500',
-    to: 'to-purple-400',
+    from: 'from-red-600',
+    to: 'to-rose-400',
     emoji: '🧊',
   },
   {
@@ -79,7 +79,7 @@ export default function PromoBanner() {
             type="button"
             onClick={() => setI(idx)}
             aria-label={`Слайд ${idx + 1}`}
-            className={`h-1.5 rounded-full transition-all ${idx === i ? 'w-6 bg-violet-600' : 'w-1.5 bg-gray-300'}`}
+            className={`h-1.5 rounded-full transition-all ${idx === i ? 'w-6 bg-red-600' : 'w-1.5 bg-gray-300'}`}
           />
         ))}
       </div>

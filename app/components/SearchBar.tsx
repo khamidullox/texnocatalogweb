@@ -14,7 +14,7 @@ export default function SearchBar() {
 
   return (
     <form onSubmit={submit} className="flex-1 max-w-xl">
-      <div className="flex items-center bg-gray-100 rounded-xl px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-violet-300">
+      <div className="flex items-center bg-gray-100 rounded-xl px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-red-300">
         <span className="text-gray-400">🔍</span>
         <input
           value={value}

@@ -58,7 +58,7 @@ export default function HomePage() {
             <Link
               key={group}
               href={`/catalog?group=${encodeURIComponent(group)}`}
-              className="shrink-0 bg-white hover:bg-violet-50 hover:text-violet-700 text-gray-600 text-xs font-medium px-3.5 py-2 rounded-full shadow-sm whitespace-nowrap"
+              className="shrink-0 bg-white hover:bg-red-50 hover:text-red-700 text-gray-600 text-xs font-medium px-3.5 py-2 rounded-full shadow-sm whitespace-nowrap"
             >
               {group}
             </Link>
@@ -81,8 +81,8 @@ export default function HomePage() {
                 href={`/catalog?group=${encodeURIComponent(group)}`}
                 className="flex items-center justify-between mb-2 group/h"
               >
-                <h3 className="font-bold text-base group-hover/h:text-violet-700">{group}</h3>
-                <span className="text-gray-400 group-hover/h:text-violet-600 text-lg">›</span>
+                <h3 className="font-bold text-base group-hover/h:text-red-700">{group}</h3>
+                <span className="text-gray-400 group-hover/h:text-red-600 text-lg">›</span>
               </Link>
               <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
                 {items.map((p) => (
