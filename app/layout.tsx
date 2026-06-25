@@ -16,7 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <header className="bg-white shadow-sm sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
             <Link href="/" className="shrink-0">
-              <Image src="/arzonchi-logo.png" alt="Arzonchi" width={140} height={36} className="h-7 sm:h-8 w-auto" priority />
+              <Image src="/arzonchi-logo.png" alt="Arzonchi" width={220} height={56} className="h-11 sm:h-14 w-auto" priority />
             </Link>
             <Link
               href="/catalog"
